@@ -54,7 +54,7 @@ const typeDefs = `
     }
 
     type Mutation{
-        addUser(userName: String!, password: String!): User!
+        addUser(userName: String!, password: String!): User
         
     }
 
@@ -68,13 +68,15 @@ const resolvers = {
 
             const db = client.db("API");
             const collection = db.collection("Users");
-
-            const result = await collection.insertOne({userName, password});
-            return {
-                userName,
-                password,
-                id: result.ops[0]._id
+  
+            const result = await collection.findOne({userName});
+            if (!result){
+                const s = await collection.insertOne({userName, password});
+                return s.ops[0];
+            }else{
+                return null;
             }
+            
         }
     }
 }
