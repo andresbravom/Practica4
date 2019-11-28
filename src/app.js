@@ -35,31 +35,32 @@ const connectToDb = async function(usr, pwd, url) {
 const runGraphQLServer = function(context){
 const typeDefs = `
     type Bill{
-        date: Int!
+        user: User!
+        amount: Float!
         concept: String!
-        quantity: Float!
-        billHolder: String!
-        id: ID!
+        date: String!
+        _id: ID!  
     }
 
     type User{
         userName: String!
         password: String!
         bills: Bill!
-        id:ID!
-        token:ID!
+        _id: ID!
+        token: ID!
     }
 
     type Query{
         user(id: ID!): User
+        bill(id: ID!): Bill
     }
 
     type Mutation{
         addUser(userName: String!, password: String!): User
+        addBill(userName: String!, token: ID!, amount: Float, concept: String, date: String): Bill
         login(userName: String!, password: String!): String
         
     }
-
 `
 const resolvers = {
 
@@ -79,9 +80,35 @@ const resolvers = {
                 return null;
             }
         },
+
+        addBill: async(parent, args, ctx, info) => {
+            const { userName, token, amount, concept, date } = args;
+           
+            const { client } = ctx;
+          
+
+            const db = client.db("API");
+            const collection = db.collection("Bills");
+            const collectionUsers = db.collection("Users");
+
+          
+            const result = await collectionUsers.findOne({token, userName});
+        
+
+            if(result){
+                const user = result._id;
+          
+                const object = await collection.insertOne({user, amount, concept, date});
+                return object.ops[0];
+            }else{
+                return null;
+            }         
+        },
+
         login: async(parent, args, ctx, info) => {
             const { userName, password } = args;
             const { client } = ctx;
+           
 
             const db = client.db("API");
             const collection = db.collection("Users");
@@ -93,9 +120,9 @@ const resolvers = {
                await collection.updateOne({userName: userName}, {$set: {token: token}});
                return token;
             }else{
-                //return null;
+                return null;
             }
-        }
+        },
     }
 }
 const server = new GraphQLServer({typeDefs, resolvers, context});
