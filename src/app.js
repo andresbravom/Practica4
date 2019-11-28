@@ -3,6 +3,8 @@ import { MongoClient, ObjectID} from "mongodb";
 import "babel-polyfill";
 //import { resolve } from 'dns';
 import * as uuid from 'uuid'
+import { resolve } from 'dns';
+import { rejects } from 'assert';
 
 
 const usr = "andresBM";
@@ -60,6 +62,7 @@ const typeDefs = `
         addUser(userName: String!, password: String!): User
         addBill(userName: String!, token: ID!, amount: Float, concept: String, date: String): Bill
         login(userName: String!, password: String!): String
+        logout(userName: String, token: String): String
         
     }
 `
@@ -173,6 +176,23 @@ const resolvers = {
                 return null;
             }
         },
+        logout: async(parent, args, ctx, info) =>{
+            const { userName, token } = args;
+            const { client } = ctx;
+            const newToken = null;
+
+            const db = client.db("API");
+            const collection = db.collection("Users");
+
+            const result = await collection.findOne({userName, token});
+
+            if(result){
+                await collection.updateOne({userName: userName}, {$set: {token: newToken}});
+                return token;
+            }else{
+                return null;
+            }  
+        }
     }
 }
 const server = new GraphQLServer({typeDefs, resolvers, context});
