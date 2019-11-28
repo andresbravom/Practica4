@@ -63,18 +63,19 @@ const typeDefs = `
         addBill(userName: String!, token: ID!, amount: Float, concept: String, date: String): Bill
         login(userName: String!, password: String!): String
         logout(userName: String, token: String): String
+        removeUser(userName: String token: String): String
         
     }
 `
 const resolvers = {
     User:{
         bills: async(parent, args, ctx, info) => {
-            const billsID = ObjectID(parent._id);
+            const user = ObjectID(parent._id);
             const{ client } = ctx;
 
             const db = client.db("API");
             const collection = db.collection("Bills");
-            const result = await collection.find({user: billsID}).toArray();
+            const result = await collection.find({user}).toArray();
             return result;
         }, 
         _id(parent, args, ctx, info){
@@ -192,6 +193,45 @@ const resolvers = {
             }else{
                 return null;
             }  
+        }, 
+        removeUser: async(parent, args, ctx, info) =>{
+            const { userName, token } = args;
+            const { client } = ctx;
+
+            const message = "Remove successfuly";
+            const db = client.db("API");
+            const collectionUsers = db.collection("Users");
+            const collectionBills = db.collection("Bills");
+
+            const result = await collectionUsers.findOne({userName, token});
+            if(result){
+                const removeBills = () => {
+                    return new Promise((resolve, reject)=> {
+                        const object = collectionBills.deleteMany({user: ObjectID(result._id)});
+                        resolve (object);
+                    }
+                )};
+
+                const deleteUser = () =>{
+                    return new Promise((resolve, reject) =>{
+                        const result = collectionUsers.deleteOne({userName});
+                        resolve (result);
+                    }
+                )};
+
+                (async function(){
+                    const asyncFunctions = [
+                        removeBills(),
+                        deleteUser()
+                    ];
+                    await Promise.all(asyncFunctions);
+                })();
+                return message;
+            }else{
+                return null;
+            }
+
+            
         }
     }
 }
