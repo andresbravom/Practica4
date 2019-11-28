@@ -35,7 +35,7 @@ const connectToDb = async function(usr, pwd, url) {
 const runGraphQLServer = function(context){
 const typeDefs = `
     type Bill{
-        user: User!
+        user: User
         amount: Float!
         concept: String!
         date: String!
@@ -45,7 +45,7 @@ const typeDefs = `
     type User{
         userName: String!
         password: String!
-        bills: [Bill]!
+        bills: [Bill]
         _id: ID!
         token: ID!
     }
@@ -53,6 +53,7 @@ const typeDefs = `
     type Query{
         user(_id: ID!): User
         bill(_id: ID!): Bill
+        getBills(userName: String, token: String): [Bill]
     }
 
     type Mutation{
@@ -63,7 +64,6 @@ const typeDefs = `
     }
 `
 const resolvers = {
-
     User:{
         bills: async(parent, args, ctx, info) => {
             const billsID = ObjectID(parent._id);
@@ -93,6 +93,25 @@ const resolvers = {
         _id(parent, args, ctx, info){
             const result = parent._id;
             return result;
+        }
+    },
+    Query:{
+        getBills: async (parent, args, ctx, info) => {
+            const {userName, token} = args;
+            const {client} = ctx;
+            const db = client.db("API");
+            const collectionBills = db.collection("Bills");
+            const collectionUsers = db.collection("Users");
+            const result = await collectionUsers.findOne({userName, token});
+
+            if(result){
+                const user = ObjectID(result._id);
+                const object = await collectionBills.find({user}).toArray();
+                return object;
+            }else{
+                null;
+            }
+            
         }
     },
     Mutation:{
