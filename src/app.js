@@ -1,7 +1,8 @@
 import  {GraphQLServer} from 'graphql-yoga'
 import { MongoClient, ObjectID} from "mongodb";
 import "babel-polyfill";
-import { resolve } from 'dns';
+//import { resolve } from 'dns';
+import * as uuid from 'uuid'
 
 
 const usr = "andresBM";
@@ -55,6 +56,7 @@ const typeDefs = `
 
     type Mutation{
         addUser(userName: String!, password: String!): User
+        login(userName: String!, password: String!): String
         
     }
 
@@ -71,12 +73,28 @@ const resolvers = {
   
             const result = await collection.findOne({userName});
             if (!result){
-                const s = await collection.insertOne({userName, password});
-                return s.ops[0];
+                const object = await collection.insertOne({userName, password});
+                return object.ops[0];
             }else{
                 return null;
             }
-            
+        },
+        login: async(parent, args, ctx, info) => {
+            const { userName, password } = args;
+            const { client } = ctx;
+
+            const db = client.db("API");
+            const collection = db.collection("Users");
+
+            const result = await collection.findOne({userName, password});
+
+            if(result){
+               const token = uuid.v4();
+               await collection.updateOne({userName: userName}, {$set: {token: token}});
+               return token;
+            }else{
+                //return null;
+            }
         }
     }
 }
