@@ -45,14 +45,14 @@ const typeDefs = `
     type User{
         userName: String!
         password: String!
-        bills: Bill!
+        bills: [Bill]!
         _id: ID!
         token: ID!
     }
 
     type Query{
-        user(id: ID!): User
-        bill(id: ID!): Bill
+        user(_id: ID!): User
+        bill(_id: ID!): Bill
     }
 
     type Mutation{
@@ -64,6 +64,37 @@ const typeDefs = `
 `
 const resolvers = {
 
+    User:{
+        bills: async(parent, args, ctx, info) => {
+            const billsID = ObjectID(parent._id);
+            const{ client } = ctx;
+
+            const db = client.db("API");
+            const collection = db.collection("Bills");
+            const result = await collection.find({user: billsID}).toArray();
+            return result;
+        }, 
+        _id(parent, args, ctx, info){
+            const result = parent._id;
+            return result;
+        }
+    },
+
+    Bill:{
+        user: async(parent, args, ctx, info) =>{
+            const userID = parent.user;
+            const { client } = ctx;
+
+            const db = client.db("API");
+            const collection = db.collection("Users");
+            const result = await collection.findOne({_id: ObjectID(userID)});
+            return result;
+        }, 
+        _id(parent, args, ctx, info){
+            const result = parent._id;
+            return result;
+        }
+    },
     Mutation:{
         addUser: async(parent, args, ctx, info) => {
             const { userName, password } = args;
