@@ -2,7 +2,7 @@ import  {GraphQLServer} from 'graphql-yoga'
 import { MongoClient, ObjectID} from "mongodb";
 import "babel-polyfill";
 import { resolve } from 'dns';
-import { json } from 'body-parser';
+
 
 const usr = "andresBM";
 const pwd = "qwerty123";
@@ -36,29 +36,51 @@ const typeDefs = `
     type Bill{
         date: Int!
         concept: String!
-        quantity: double!
-        bill holder: String!
+        quantity: Float!
+        billHolder: String!
+        id: ID!
     }
 
-    type BillHolder{
+    type User{
         userName: String!
         password: String!
         bills: Bill!
+        id:ID!
+        token:ID!
     }
 
     type Query{
-        getBills(userName: String!, ): Bill!
+        user(id: ID!): User
     }
 
     type Mutation{
-        addUser(userName: String!, password: String!): BillHolder!
-        login(userName: String!, password: String!): BillHolder!
-        logout(userName: String!, ): BillHolder!
-        removeUser(userName: String, ): BillHolder!
+        addUser(userName: String!, password: String!): User!
+        
     }
 
 `
+const resolvers = {
+
+    Mutation:{
+        addUser: async(parent, args, ctx, info) => {
+            const { userName, password } = args;
+            const { client } = ctx;
+
+            const db = client.db("API");
+            const collection = db.collection("Users");
+
+            const result = await collection.insertOne({userName, password});
+            return {
+                userName,
+                password,
+                id: result.ops[0]._id
+            }
+        }
+    }
 }
+const server = new GraphQLServer({typeDefs, resolvers, context});
+server.start(() => console.log("Server started"));
+};
 const runApp = async function(){
     const client = await connectToDb(usr, pwd, url);
     console.log("Connect to Mongo DB");
